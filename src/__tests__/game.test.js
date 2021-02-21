@@ -1,8 +1,9 @@
 import { testSprite } from "@replay/test";
-import { mapInputCoordinates } from "@replay/web";
 import { Game, gameProps } from "..";
+import { pipeGap } from "../pipe";
+import { birdHeight } from "../bird";
 
-test("gameplay", async () => {
+test("Can reach a score of 2", async () => {
   const initInputs = {
     pointer: {
       pressed: false,
@@ -15,48 +16,81 @@ test("gameplay", async () => {
     keysDown: {},
     keysJustPressed: {},
   };
+  const mainMenuText = "Start";
 
-  const {
-    nextFrame,
-    jumpToFrame,
-    updateInputs,
+  const { 
+    nextFrame, 
+    updateInputs, 
+    getByText,
     getTexture,
-    loadFiles,
-    audio,
+    jumpToFrame,
+    audio, 
+    loadFiles 
   } = testSprite(Game(gameProps), gameProps, {
-    initInputs,
-    mapInputCoordinates,
-  });
+      initInputs,
+      initRandom: [0.5, 0.5, 0],
+    }
+  );
 
   await loadFiles();
   nextFrame();
 
-  expect(getTexture("icon").props.x).toBe(0);
-  expect(getTexture("icon").props.y).toBe(0);
-  expect(getTexture("icon").props.rotation).toBe(0);
+  expect(getByText(mainMenuText).length).toBe(1);
 
   updateInputs({
     pointer: {
-      pressed: true,
+      pressed: false,
       numberPressed: 1,
-      justPressed: true,
-      justReleased: false,
-      x: 100,
-      y: 100,
+      justPressed: false,
+      justReleased: true,
+      x: 0,
+      y: 0,
     },
     keysDown: {},
     keysJustPressed: {},
   });
-
   nextFrame();
 
   updateInputs(initInputs);
+  nextFrame();
+
+  // Main menu gone, game has started
+  expect(getByText(mainMenuText).length).toBe(0);
+  
+  // Keeps the bird hovering in the middle to pass the first 2 pipes
+  function keepBirdInMiddle() {
+    if (getTexture("bird").props.y < -pipeGap / 2 + birdHeight + 20) {
+      updateInputs({
+        pointer: {
+          pressed: true,
+          numberPressed: 1,
+          justPressed: true,
+          justReleased: false,
+          x: 0,
+          y: 0,
+        },
+        keysDown: {},
+        keysJustPressed: {},
+      });
+      nextFrame();
+
+      updateInputs(initInputs);
+      nextFrame();
+    }
+
+    nextFrame();
+  }
+
+  await jumpToFrame(() => {
+    keepBirdInMiddle();
+
+    // Exit when main menu appears again
+    return getByText(mainMenuText).length > 0;
+  });
+
+  getByText("Score: 2");
+  getByText("High score: 2");
 
   expect(audio.play).toBeCalledWith("boop.wav");
-
-  await jumpToFrame(() => getTexture("icon").props.x > 99.99);
-
-  expect(getTexture("icon").props.y).toBeCloseTo(100);
-
-  expect(audio.play).toHaveBeenCalledTimes(1);
+  expect(audio.play).toBeCalledTimes(1);
 });

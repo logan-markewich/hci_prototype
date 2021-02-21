@@ -1,92 +1,56 @@
 import { makeSprite, t } from "@replay/core";
+import { StoreFloorplan } from "./storeScene";
 
 export const options = {
   dimensions: "scale-up",
 };
 
-export const gameProps = {
-  id: "Game",
-  size: {
-    landscape: {
-      width: 600,
-      height: 400,
-      maxWidthMargin: 150,
-    },
-    portrait: {
-      width: 400,
-      height: 600,
-      maxHeightMargin: 150,
-    },
-  },
-  defaultFont: {
-    name: "Courier",
-    size: 10,
-  },
-};
-
+// Layers are rendered in order (bottom first)
 export const Game = makeSprite({
-  init({ updateState, preloadFiles }) {
+  init({ device, preloadFiles, updateState }) {
     preloadFiles({
-      audioFileNames: ["boop.wav"],
-      imageFileNames: ["icon.png"],
+      imageFileNames: ["objects.png", "player.png", "footstep.png"],
+      audioFileNames: [],
     }).then(() => {
-      updateState((state) => ({ ...state, loaded: true }));
+      updateState((state) => {
+        return {...state, view: "level"};
+      });
     });
 
     return {
-      loaded: false,
-      posX: 0,
-      posY: 0,
-      targetX: 0,
-      targetY: 0,
-    };
-  },
-
-  loop({ state, device }) {
-    if (!state.loaded) return state;
-
-    const { pointer } = device.inputs;
-    const { posX, posY } = state;
-    let { targetX, targetY } = state;
-
-    if (pointer.justPressed) {
-      device.audio("boop.wav").play();
-      targetX = pointer.x;
-      targetY = pointer.y;
-    }
-
-    return {
-      loaded: true,
-      posX: posX + (targetX - posX) / 10,
-      posY: posY + (targetY - posY) / 10,
-      targetX,
-      targetY,
+      view: "loading"
     };
   },
 
   render({ state }) {
-    if (!state.loaded) {
+    if (state.view === "loading") {
       return [
         t.text({
-          text: "Loading...",
           color: "black",
-        }),
-      ];
+          text: "Loading...",
+        })
+      ]
     }
+
     return [
-      t.text({
-        color: "red",
-        text: "Hello Replay! To get started, edit src/index.js",
-        y: 50,
-      }),
-      t.image({
-        testId: "icon",
-        x: state.posX,
-        y: state.posY,
-        fileName: "icon.png",
-        width: 50,
-        height: 50,
+      StoreFloorplan({
+        id: 'level',
+        tileSize: 35,
       }),
     ];
   },
 });
+
+export const gameProps = {
+  id: "Game",
+  size: {
+    width: 600,
+    height: 800,
+    maxHeightMargin: 150,
+    maxWidthMargin: 150,
+  },
+  defaultFont: {
+    name: "Helvetica",
+    size: 24,
+  },
+};
